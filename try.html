@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>🏳️‍⚧️ India Trans Care Resource Map</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- CSV Parser -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+    }
+
+    h1 {
+      margin: 0;
+      padding: 10px;
+      background: #222;
+      color: white;
+      font-size: 18px;
+    }
+
+    #map {
+      height: 90vh;
+    }
+
+    footer {
+      height: 10vh;
+      padding: 8px;
+      font-size: 12px;
+      background: #111;
+      color: #eee;
+      text-align: center;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🏳️‍⚧️ India Trans Care Resource Map</h1>
+
+  <div id="map"></div>
+
+  <footer>
+    🌐 Community-sourced healthcare dataset (includes publicly shared insights and Reddit community discussions).
+    <br>
+    💬 If any information is incorrect, please contact: <b>niki27028@gmail.com</b> for corrections.
+    <br><br>
+    🤝 “Small data can create big safety. Built with care, dignity, and community support.”
+  </footer>
+
+  <script>
+
+    // 🇮🇳 India-locked map
+    const map = L.map('map', {
+      center: [22.9734, 78.6569],
+      zoom: 5,
+      minZoom: 5,
+      maxZoom: 7,
+      maxBounds: [
+        [6.0, 68.0],
+        [37.0, 97.0]
+      ],
+      maxBoundsViscosity: 1.0
+    });
+
+    // 🗺️ Base map
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    // 🧠 Handle missing values
+    function getValue(v) {
+      return v && v.toString().trim() !== "" ? v : "NA";
+    }
+
+    // 📊 Load CSV
+    Papa.parse("book1.csv", {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+
+      complete: function (results) {
+
+        const locationMap = {};
+
+        // 📍 Group doctors by same coordinates
+        results.data.forEach(row => {
+
+          let lat = parseFloat(row["Lat"]);
+          let lon = parseFloat(row["Long"]);
+
+          if (isNaN(lat) || isNaN(lon)) return;
+
+          let key = lat + "," + lon;
+
+          if (!locationMap[key]) {
+            locationMap[key] = {
+              coords: [lat, lon],
+              doctors: []
+            };
+          }
+
+          locationMap[key].doctors.push(row);
+        });
+
+        // 📍 Create markers
+        Object.values(locationMap).forEach(group => {
+
+          let popup = `<b>🏥 Healthcare Location</b><br><br>`;
+
+          group.doctors.forEach(doc => {
+
+            popup += `
+          <hr>
+          <b>${getValue(doc["Name"])}</b><br>
+          🧠 ${getValue(doc["Type"])}<br>
+          🏥 ${getValue(doc["Hospital"])}<br>
+          📍 ${getValue(doc["Area"])}, ${getValue(doc["City"])}<br><br>
+
+          ⭐ Rating: ${getValue(doc["Overall Rating"])}<br>
+          📝 Reviews: ${getValue(doc["Number of reviews"])}<br>
+          💰 Fees: ₹${getValue(doc["Fees"])}<br>
+          📞 Contact: ${getValue(doc["How to contact"])}<br><br>
+
+          💬 <i>${getValue(doc["Comments"])}</i><br>
+        `;
+          });
+
+          L.marker(group.coords)
+            .addTo(map)
+            .bindPopup(popup);
+
+        });
+
+      }
+    });
+
+  </script>
+
+</body>
+
+</html>
